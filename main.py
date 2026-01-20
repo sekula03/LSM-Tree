@@ -14,11 +14,14 @@ def create():
     if column in indexes:
         print("There is already an index on this column")
         return
-    if column in headers:
-        idx, t = headers[column]
-        indexes[column] = LSM(idx)
-    else:
+    if column not in headers:
         print("Invalid column name")
+        return
+    idx, t = headers[column]
+    indexes[column] = LSM(idx)
+    fill = input("Fill index with data? (Y/N) ").strip().upper() == "Y"
+    if fill:
+        _fill(indexes[column])
 
 
 def insert():
@@ -182,23 +185,19 @@ def stats():
         print(line)
 
 
-def _fill():
-    global table_name, headers, indexes, next_id
-    copy_file = "copy.csv"
+def _fill(lsm):
+    global table_name, headers, indexes
     try:
-        with open(copy_file, "r", newline="") as src, open(table_name, "a", newline="") as dst:
-            reader = csv.reader(src)
-            writer = csv.writer(dst)
+        with open(table_name, "r", newline="") as file:
+            reader = csv.reader(file)
+            next(reader, None)
             for row in reader:
-                writer.writerow(row)
                 items = sorted(headers.items(), key=lambda kv: kv[1][0])
                 _, col_types = zip(*[(name, typ) for name, (idx, typ) in items])
                 record = [t(v) for t, v in zip(col_types, row)]
-                for _, lsm in indexes.items():
-                    lsm.insert(record)
-                next_id = int(row[0]) + 1
+                lsm.insert(record)
     except FileNotFoundError:
-        print("copy.csv not found")
+        pass
 
 
 def _init():
@@ -243,7 +242,7 @@ def main():
         print("5 - index stats")
         print("0 - exit")
         op = int(input())
-        while op not in (0, 1, 2, 3, 4, 5, 6):
+        while op not in (0, 1, 2, 3, 4, 5):
             print("Invalid input")
             op = int(input())
         if op == 1:
@@ -256,8 +255,6 @@ def main():
             search()
         elif op == 5:
             stats()
-        elif op == 6:
-            _fill()
         else:
             break
 
